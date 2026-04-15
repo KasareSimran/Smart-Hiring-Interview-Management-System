@@ -5,6 +5,8 @@ import com.userService.UserService.dto.AuthResponse;
 import com.userService.UserService.dto.LoginRequest;
 import com.userService.UserService.dto.RegisterRequest;
 import com.userService.UserService.service.UserService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +28,20 @@ public class AuthController {
     // LOGIN
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(userService.loginUser(request));
+        AuthResponse response = userService.loginUser(request);
+
+        //  Create HttpOnly Cookie
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", response.getRefreshToken())
+                .httpOnly(true)   // ❗ JS cannot access
+                .secure(true)     // ❗ only HTTPS
+                .path("/")        // available for all APIs
+                .maxAge(7 * 24 * 60 * 60) // 7 days
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
     }
 
     // REFRESH TOKEN
@@ -38,9 +53,22 @@ public class AuthController {
 
     //LOGOUT
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestParam String token) {
+    public ResponseEntity<String> logout(
+            @CookieValue("refreshToken") String token) {
+
         userService.logout(token);
-        return ResponseEntity.ok("Logged out successfully");
+
+        // Clear cookie
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0) // delete cookie
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body("Logged out successfully");
     }
 
 }

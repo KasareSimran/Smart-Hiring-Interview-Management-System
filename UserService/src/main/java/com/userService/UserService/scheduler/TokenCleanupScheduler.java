@@ -16,7 +16,7 @@ public class TokenCleanupScheduler {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
-    // 🔥 Runs every day at midnight
+    // Runs every day at midnight
     @Scheduled(cron = "0 0 0 * * ?")
     @Transactional
     public void deleteExpiredTokens() {
