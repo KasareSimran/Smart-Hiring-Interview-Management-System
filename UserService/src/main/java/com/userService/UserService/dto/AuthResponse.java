@@ -5,16 +5,18 @@ import java.util.Set;
 public class AuthResponse {
     private String token;
     private String message;
+    private String refreshToken;
     private Set<String> roles;
 
 
     public AuthResponse() {
     }
 
-    public AuthResponse(String token, String message, Set<String> roles) {
+    public AuthResponse(String token, String message, Set<String> roles,String refreshToken) {
         this.token = token;
         this.message = message;
         this.roles = roles;
+        this.refreshToken=refreshToken;
     }
 
     public String getToken() {
@@ -39,5 +41,13 @@ public class AuthResponse {
 
     public void setRoles(Set<String> roles) {
         this.roles = roles;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 }

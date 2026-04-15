@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService{
     private static final Logger logger =
             LoggerFactory.getLogger(UserServiceImpl.class);
 
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtProvider jwtProvider;
@@ -60,20 +61,36 @@ public class UserServiceImpl implements UserService{
     @Override
     public AuthResponse refreshToken(String requestToken) {
 
+        //find token
         RefreshToken refreshToken = refreshTokenRepository.findByToken(requestToken)
                 .orElseThrow(() -> new CustomException("Invalid refresh token"));
 
+
+        //check expiry
         if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(refreshToken);
             throw new CustomException("Refresh token expired");
         }
 
+        // ⭐ Sliding session
+        refreshToken.setExpiryDate(LocalDateTime.now().plusDays(7));
+        refreshTokenRepository.save(refreshToken);
+
+
+        // Get user
         User user = refreshToken.getUser();
 
         Set<String> roles = user.getRoles()
                 .stream()
                 .map(Role::getName)
                 .collect(Collectors.toSet());
+
+
+        //DELETE OLD REFRESH TOKEN (ROTATION)
+        refreshTokenRepository.delete(refreshToken);
+
+        // CREATE NEW REFRESH TOKEN
+        RefreshToken newRefreshToken = createRefreshToken(user);
 
         String newAccessToken = jwtProvider.generateAccessToken(user.getEmail(),roles);
 
@@ -193,7 +210,7 @@ public class UserServiceImpl implements UserService{
 
         AuthResponse response = new AuthResponse();
         response.setToken(token);
-        response.setMessage(refreshToken.getToken()); // store refresh token here
+        response.setRefreshToken(refreshToken.getToken()); // store refresh token here
         response.setMessage("Login successful");
 
         response.setRoles(roles);
@@ -282,6 +299,16 @@ public class UserServiceImpl implements UserService{
         );
 
         return refreshTokenRepository.save(refreshToken);
+    }
+
+
+    @Override
+    public void logout(String token) {
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new CustomException("Invalid refresh token"));
+
+        refreshTokenRepository.delete(refreshToken);
     }
 
 

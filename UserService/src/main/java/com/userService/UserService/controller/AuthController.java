@@ -31,13 +31,16 @@ public class AuthController {
 
     // REFRESH TOKEN
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestParam String token) {
+    public ResponseEntity<AuthResponse> refresh(
+            @CookieValue("refreshToken") String token) {
         return ResponseEntity.ok(userService.refreshToken(token));
     }
 
-//    // LOGOUT
-//    @PostMapping("/logout")
-//    public ResponseEntity<String> logout(@RequestParam String email) {
-//        return ResponseEntity.ok(userService.logoutUser(email));
-//    }
+    //LOGOUT
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestParam String token) {
+        userService.logout(token);
+        return ResponseEntity.ok("Logged out successfully");
+    }
+
 }

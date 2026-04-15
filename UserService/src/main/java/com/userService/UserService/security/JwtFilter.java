@@ -55,6 +55,15 @@ public class JwtFilter extends OncePerRequestFilter {
 
         try {
 
+            // ✅ ADD THIS FIRST
+            if (!jwtValidator.validateToken(token)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+
+
+
             // 🔥 STEP 1: Parse token
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(jwtProvider.getKey())
