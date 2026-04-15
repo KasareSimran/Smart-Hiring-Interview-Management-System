@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -25,6 +26,7 @@ public class User {
     @Email(message = "Invalid email format")
     @Column(nullable = false, unique = true)
     private String email;
+
 
 
     @NotBlank(message = "Password is required")
