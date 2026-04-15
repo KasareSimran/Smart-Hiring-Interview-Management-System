@@ -15,4 +15,7 @@ public interface UserService {
     List<UserResponse> getAllUsers();
 
     String updateUserStatus(Long userId, String status);
+
+    AuthResponse refreshToken(String requestToken);
+
 }

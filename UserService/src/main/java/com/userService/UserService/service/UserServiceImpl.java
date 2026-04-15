@@ -6,10 +6,12 @@ import com.userService.UserService.dto.AuthResponse;
 import com.userService.UserService.dto.LoginRequest;
 import com.userService.UserService.dto.RegisterRequest;
 import com.userService.UserService.dto.UserResponse;
+import com.userService.UserService.entity.RefreshToken;
 import com.userService.UserService.entity.Role;
 import com.userService.UserService.entity.Status;
 import com.userService.UserService.entity.User;
 import com.userService.UserService.exception.CustomException;
+import com.userService.UserService.repository.RefreshTokenRepository;
 import com.userService.UserService.repository.RoleRepository;
 import com.userService.UserService.repository.UserRepository;
 import org.slf4j.Logger;
@@ -19,10 +21,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,22 +32,56 @@ public class UserServiceImpl implements UserService{
     private static final Logger logger =
             LoggerFactory.getLogger(UserServiceImpl.class);
 
-    private UserRepository userRepository;
-    private RoleRepository roleRepository;
-    private JwtProvider jwtProvider;
-    private AuthenticationManager authenticationManager;
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final JwtProvider jwtProvider;
+    private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+
 
     public UserServiceImpl(UserRepository userRepository,
                            RoleRepository roleRepository,
                            JwtProvider jwtProvider,
                            AuthenticationManager authenticationManager,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.jwtProvider = jwtProvider;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenRepository = refreshTokenRepository;
+    }
+
+
+
+
+    @Override
+    public AuthResponse refreshToken(String requestToken) {
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(requestToken)
+                .orElseThrow(() -> new CustomException("Invalid refresh token"));
+
+        if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new CustomException("Refresh token expired");
+        }
+
+        User user = refreshToken.getUser();
+
+        String newAccessToken = jwtProvider.generateAccessToken(user.getEmail());
+
+        AuthResponse response = new AuthResponse();
+        response.setToken(newAccessToken);
+        response.setMessage("New access token generated");
+        Set<String> rolesSet = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+
+        response.setRoles(rolesSet);
+
+        return response;
     }
 
 
@@ -148,9 +182,11 @@ public class UserServiceImpl implements UserService{
         logger.info("Login successful for email: {}", request.getEmail());
 
         String token = jwtProvider.generateAccessToken(user.getEmail());
+        RefreshToken refreshToken = createRefreshToken(user);
 
         AuthResponse response = new AuthResponse();
         response.setToken(token);
+        response.setMessage(refreshToken.getToken()); // store refresh token here
         response.setMessage("Login successful");
         Set<String> roles = user.getRoles().stream()
                 .map(Role::getName)
@@ -227,4 +263,24 @@ public class UserServiceImpl implements UserService{
 
         return "User status updated successfully";
     }
+
+
+
+    private RefreshToken createRefreshToken(User user) {
+
+        RefreshToken refreshToken = new RefreshToken();
+
+        refreshToken.setUser(user);
+        refreshToken.setToken(UUID.randomUUID().toString());
+
+        refreshToken.setExpiryDate(
+                LocalDateTime.now().plusDays(7)
+        );
+
+        return refreshTokenRepository.save(refreshToken);
+    }
+
+
+
+
 }
