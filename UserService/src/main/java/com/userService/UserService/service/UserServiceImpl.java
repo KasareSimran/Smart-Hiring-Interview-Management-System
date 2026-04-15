@@ -9,6 +9,7 @@ import com.userService.UserService.dto.UserResponse;
 import com.userService.UserService.entity.Role;
 import com.userService.UserService.entity.Status;
 import com.userService.UserService.entity.User;
+import com.userService.UserService.exception.CustomException;
 import com.userService.UserService.repository.RoleRepository;
 import com.userService.UserService.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -51,7 +52,7 @@ public class UserServiceImpl implements UserService{
         // Check if user exists
         userRepository.findByEmail(request.getEmail())
                 .ifPresent(user -> {
-                    throw new RuntimeException("Email already registered");
+                    throw new CustomException("Email already registered");
                 });
 
         // Assign role
@@ -60,7 +61,7 @@ public class UserServiceImpl implements UserService{
                 : "ROLE_USER";
 
         Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+                .orElseThrow(() -> new CustomException("Role not found"));
 
         Set<Role> roles = new HashSet<>();
         roles.add(role);
@@ -108,7 +109,7 @@ public class UserServiceImpl implements UserService{
                 )
         );
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found"));
 
         String token = jwtProvider.generateAccessToken(user.getEmail());
 
@@ -163,13 +164,13 @@ public class UserServiceImpl implements UserService{
     @Override
     public String updateUserStatus(Long userId, String status) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found"));
 
         try {
             Status newStatus = Status.valueOf(status.toUpperCase());
             user.setStatus(newStatus);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status value");
+            throw new CustomException("Invalid status value");
         }
 
         userRepository.save(user);
