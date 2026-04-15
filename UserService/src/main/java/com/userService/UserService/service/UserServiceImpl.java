@@ -70,16 +70,18 @@ public class UserServiceImpl implements UserService{
 
         User user = refreshToken.getUser();
 
-        String newAccessToken = jwtProvider.generateAccessToken(user.getEmail());
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+
+        String newAccessToken = jwtProvider.generateAccessToken(user.getEmail(),roles);
 
         AuthResponse response = new AuthResponse();
         response.setToken(newAccessToken);
         response.setMessage("New access token generated");
-        Set<String> rolesSet = user.getRoles().stream()
-                .map(Role::getName)
-                .collect(Collectors.toSet());
+        response.setRoles(roles);
 
-        response.setRoles(rolesSet);
 
         return response;
     }
@@ -100,43 +102,43 @@ public class UserServiceImpl implements UserService{
         }
 
         // Assign role
-        String roleName = request.getRole();
-        if (roleName == null || roleName.isEmpty()) {
-            roleName = "ROLE_USER";
-            logger.info("No role provided. Assigning default role: {}", roleName);
-        }
+        String roleName = (request.getRole() == null)
+                ? "ROLE_USER"
+                : request.getRole();
 
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new CustomException("Role not found"));
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(role);
+//        Set<Role> roles = new HashSet<>();
+//        roles.add(role);
 
         // Create User
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRoles(roles);
+        user.setRoles(Set.of(role));
         user.setStatus(Status.ACTIVE);
 
         userRepository.save(user);
         logger.info("User registered successfully: {}", user.getEmail());
 
 
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
 
 
         // Generate token
-        String token = jwtProvider.generateAccessToken(user.getEmail());
+        String token = jwtProvider.generateAccessToken(user.getEmail(),roles);
 
         AuthResponse response = new AuthResponse();
         response.setToken(token);
         response.setMessage("User registered successfully");
-        // convert role to Set
-        Set<String> rolesSet = new HashSet<>();
-        rolesSet.add(roleName);
+        response.setRoles(roles);
 
-        response.setRoles(rolesSet);
+
 
 
 
@@ -180,17 +182,19 @@ public class UserServiceImpl implements UserService{
 
 
         logger.info("Login successful for email: {}", request.getEmail());
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
 
-        String token = jwtProvider.generateAccessToken(user.getEmail());
+
+        String token = jwtProvider.generateAccessToken(user.getEmail(),roles);
         RefreshToken refreshToken = createRefreshToken(user);
 
         AuthResponse response = new AuthResponse();
         response.setToken(token);
         response.setMessage(refreshToken.getToken()); // store refresh token here
         response.setMessage("Login successful");
-        Set<String> roles = user.getRoles().stream()
-                .map(Role::getName)
-                .collect(Collectors.toSet());
 
         response.setRoles(roles);
 

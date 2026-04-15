@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Set;
 
 @Component
 public class JwtProvider {
@@ -30,9 +31,10 @@ public class JwtProvider {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateAccessToken(String email) {
+    public String generateAccessToken(String email, Set<String> roles) {
         return Jwts.builder()
                 .setSubject(email)
+                .claim("roles",roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
