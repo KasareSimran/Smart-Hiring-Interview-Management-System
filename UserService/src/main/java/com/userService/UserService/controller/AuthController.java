@@ -33,7 +33,7 @@ public class AuthController {
         //  Create HttpOnly Cookie
         ResponseCookie cookie = ResponseCookie.from("refreshToken", response.getRefreshToken())
                 .httpOnly(true)   // ❗ JS cannot access
-                .secure(true)     // ❗ only HTTPS
+                .secure(false)     // ❗ only HTTPS
                 .path("/")        // available for all APIs
                 .maxAge(7 * 24 * 60 * 60) // 7 days
                 .sameSite("Strict")

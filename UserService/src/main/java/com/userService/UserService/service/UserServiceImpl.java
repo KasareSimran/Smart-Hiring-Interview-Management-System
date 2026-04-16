@@ -118,16 +118,27 @@ public class UserServiceImpl implements UserService{
             throw new CustomException("Email already registered");
         }
 
+
         // Assign role
-        String roleName = (request.getRole() == null)
-                ? "ROLE_USER"
-                : request.getRole();
+        String roleName = request.getRole();
+
+        if (roleName == null || roleName.isEmpty()) {
+            throw new CustomException("Role is required");
+        }
+
+        roleName = roleName.toUpperCase();
+
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
 
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new CustomException("Role not found"));
 
 //        Set<Role> roles = new HashSet<>();
 //        roles.add(role);
+
+
 
         // Create User
         User user = new User();
@@ -149,9 +160,11 @@ public class UserServiceImpl implements UserService{
 
         // Generate token
         String token = jwtProvider.generateAccessToken(user.getEmail(),roles);
+        RefreshToken refreshToken = createRefreshToken(user);
 
         AuthResponse response = new AuthResponse();
         response.setToken(token);
+        response.setRefreshToken(refreshToken.getToken());
         response.setMessage("User registered successfully");
         response.setRoles(roles);
 
@@ -214,6 +227,9 @@ public class UserServiceImpl implements UserService{
         response.setMessage("Login successful");
 
         response.setRoles(roles);
+
+        System.out.println("TOKEN: " + token);
+
 
         return response;
     }
